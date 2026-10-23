@@ -1,4 +1,4 @@
-```yaml
+
 channel:
   name: "USHORA AI"
   language: "Hindi"
@@ -29,14 +29,4 @@ upload:
   enabled: false
   privacy: "private"
   allow_public: false
-
-### Step 2: File save karo
-
-1. Upar right mein **Commit changes…** par tap karo.
-2. Jo popup khule, usmein dobara **Commit changes** dabao.
-3. Save hone ke baad repository ke main page par aa jao.
-
-**Important:** Abhi automatic YouTube upload band hai. Pehle video generate karne wala workflow test karenge; uske baad upload setup dekhenge.
-
-✅ Save ho jaaye toh screenshot bhejna. Main tumhe next file banane ka step bataunga.
-```
+  
