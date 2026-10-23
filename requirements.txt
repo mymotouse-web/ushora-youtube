@@ -1,0 +1,5 @@
+edge-tts
+requests
+Pillow
+PyYAML
+feedparser
