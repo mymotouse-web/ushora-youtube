@@ -29,4 +29,5 @@ upload:
   enabled: false
   privacy: "private"
   allow_public: false
-  
+visuals:
+  enabled: true  
