@@ -174,41 +174,105 @@ def _discover_model(key):
     return ok[0][2]
 
 
+def _api_error_message(response):
+    """Return a useful API error without ever exposing the API key."""
+    try:
+        data = response.json()
+        err = data.get("error", {})
+        message = str(err.get("message", "")).strip()
+        status = str(err.get("status", "")).strip()
+        reason = ""
+        details = err.get("details", [])
+        if isinstance(details, list):
+            for item in details:
+                if isinstance(item, dict):
+                    reason = str(item.get("reason") or item.get("quotaMetric") or "")
+                    if reason:
+                        break
+        parts = [f"HTTP {response.status_code}"]
+        if status:
+            parts.append(status)
+        if reason:
+            parts.append(reason)
+        if message:
+            parts.append(message[:700])
+        return " | ".join(parts)
+    except Exception:
+        return f"HTTP {response.status_code}: {response.text[:300]}"
+
+
 def gemini_json(cfg, prompt, temperature=0.8):
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not key:
         raise RuntimeError("GEMINI_API_KEY secret is missing. Add it in GitHub > Settings > Secrets, "
                            "or run mode 'test' which needs no keys.")
+
     model = cfg["llm"]["model"]
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": temperature, "responseMimeType": "application/json"}}
-    last = ""
-    for attempt in range(5):
-        r = requests.post(f"{GEMINI_BASE}/models/{model}:generateContent",
-                          headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                          json=body, timeout=180)
-        if r.status_code == 404:
-            model = _discover_model(key)
-            continue
-        if r.status_code in (429, 500, 503):
-            last = f"HTTP {r.status_code}"
-            time.sleep(15 * (attempt + 1))
-            continue
-        if r.status_code != 200:
-            raise RuntimeError(f"Gemini error HTTP {r.status_code}: {r.text[:300]}")
-        data = r.json()
+    last_error = ""
+    discovered_after_404 = False
+
+    for attempt in range(4):
         try:
+            response = requests.post(
+                f"{GEMINI_BASE}/models/{model}:generateContent",
+                headers={"x-goog-api-key": key, "Content-Type": "application/json"},
+                json=body, timeout=180
+            )
+        except requests.RequestException as ex:
+            last_error = f"Network error ({type(ex).__name__}): {str(ex)[:250]}"
+            if attempt < 3:
+                time.sleep(3 * (attempt + 1))
+                continue
+            break
+
+        if response.status_code == 404 and not discovered_after_404:
+            try:
+                model = _discover_model(key)
+                discovered_after_404 = True
+                print(f"[llm] retrying with available model: {model}")
+                continue
+            except Exception as ex:
+                last_error = f"{_api_error_message(response)}; model discovery failed: {str(ex)[:250]}"
+                break
+
+        if response.status_code in (429, 500, 503):
+            last_error = _api_error_message(response)
+            if attempt < 3:
+                retry_after = response.headers.get("Retry-After", "")
+                try:
+                    wait_seconds = min(max(int(retry_after), 2), 30) if retry_after else min(5 * (attempt + 1), 20)
+                except ValueError:
+                    wait_seconds = min(5 * (attempt + 1), 20)
+                print(f"[llm] temporary API error ({last_error}); retry {attempt + 1}/3 in {wait_seconds}s")
+                time.sleep(wait_seconds)
+                continue
+            break
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Gemini request failed: {_api_error_message(response)}")
+
+        try:
+            data = response.json()
             text = data["candidates"][0]["content"]["parts"][0]["text"]
-        except Exception:
-            raise RuntimeError(f"Gemini returned no text: {str(data)[:300]}")
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise RuntimeError(f"Gemini returned no usable text: {str(response.text)[:500]}")
+
         text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.M).strip()
         try:
             return json.loads(text)
         except json.JSONDecodeError:
             a, b = text.find("{"), text.rfind("}")
-            return json.loads(text[a:b + 1])
-    raise RuntimeError(f"Gemini kept failing ({last}). Free-tier limit may be reached; try again later.")
+            if a >= 0 and b > a:
+                try:
+                    return json.loads(text[a:b + 1])
+                except json.JSONDecodeError:
+                    pass
+            raise RuntimeError("Gemini returned text that was not valid JSON.")
 
+    raise RuntimeError(f"Gemini request failed after retries: {last_error or 'unknown API error'}. "
+                       "Check the exact message above for quota, billing, model access, or network issues.")
 
 def make_real_script(cfg, history):
     cands = fetch_candidates(cfg, history)
