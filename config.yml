@@ -1,9 +1,9 @@
-
 channel:
-  name: "USHORA AI"
+  name: "USHORA AI & TECHNOLOGY"
   language: "Hindi"
   style: "Hindi AI and technology news"
   spoken_name: "Ushora AI"
+  audience: "Indian viewers interested in AI and technology"
 
 content:
   mode: "ai_tech_news"
@@ -17,10 +17,39 @@ content:
     - "Fake news"
     - "Copyrighted scripts"
 
+topics:
+  max_age_days: 7
+
+llm:
+  model: "gemini-2.0-flash"
+
 video:
   width: 1080
   height: 1920
+  orientation: "portrait"
   fps: 30
+  target_minutes: 1
+  accent_color: "#00D9FF"
+
+voice:
+  engines:
+    - "edge"
+    - "espeak"
+  edge_voice: "hi-IN-MadhurNeural"
+  rate: "+0%"
+  pitch: "+0Hz"
+
+subtitles:
+  max_chars_per_line_portrait: 24
+  max_chars_per_line_landscape: 38
+
+visuals:
+  enabled: true
+  use_pexels: false
+
+music:
+  enabled: true
+  volume: 0.08
 
 schedule:
   enabled: false
@@ -29,5 +58,4 @@ upload:
   enabled: false
   privacy: "private"
   allow_public: false
-visuals:
-  enabled: true  
+  description_footer: "Subscribe to USHORA AI & TECHNOLOGY for more AI and tech videos."
