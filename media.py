@@ -150,6 +150,36 @@ def make_card(path, W, H, idx, text, accent):
     for y in range(0, h, step):
         d.line([(0, y), (w, y)], fill=(255, 255, 255, 14), width=1)
     img = Image.alpha_composite(img, grid)
+
+    # Tech-themed HUD artwork: circuit traces, nodes and a central chip.
+    hud = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    hd = ImageDraw.Draw(hud)
+    accent_rgba = hex_rgb(accent) + (170,)
+    cx, cy = w // 2, int(h * 0.68)
+    radius = int(min(w, h) * 0.16)
+    # Subtle orbital rings and a central processor tile.
+    for rr, alpha, width in ((radius, 100, 5), (int(radius * 1.28), 65, 3), (int(radius * 1.55), 40, 2)):
+        hd.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=hex_rgb(accent) + (alpha,), width=width)
+    chip = int(radius * 0.72)
+    hd.rounded_rectangle([cx-chip, cy-chip, cx+chip, cy+chip], radius=22,
+                         outline=accent_rgba, width=7, fill=(5, 15, 35, 150))
+    # Circuit lines vary by scene index so cards are not identical.
+    for j in range(8):
+        side = -1 if j % 2 == 0 else 1
+        yy = cy - chip + (j // 2) * max(1, chip // 2)
+        start_x = cx + side * chip
+        end_x = start_x + side * int(w * (0.08 + 0.025 * (j % 3)))
+        bend_y = yy + (1 if (j + idx) % 2 else -1) * int(h * 0.025)
+        hd.line([(start_x, yy), (end_x, yy), (end_x, bend_y)], fill=accent_rgba, width=4)
+        hd.ellipse([end_x-7, bend_y-7, end_x+7, bend_y+7], fill=accent_rgba)
+    # A small equalizer motif adds visual rhythm without hiding the headline.
+    bar_base, bar_w = int(h * 0.87), max(8, int(w * 0.018))
+    for j in range(9):
+        bh = int(h * (0.018 + 0.012 * ((j * 7 + idx * 3) % 5)))
+        bx = int(w * 0.27) + j * int(w * 0.055)
+        hd.rounded_rectangle([bx, bar_base-bh, bx+bar_w, bar_base], radius=bar_w//2,
+                             fill=hex_rgb(accent) + (110 + (j % 3) * 40,))
+    img = Image.alpha_composite(img, hud)
     if text:
         d = ImageDraw.Draw(img)
         fs = int(min(W, H) * 0.075)
