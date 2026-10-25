@@ -2,6 +2,14 @@ name: Make video
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "config.yml"
+      - "main.py"
+      - "media.py"
+      - "content.py"
+      - "requirements.txt"
+      - ".github/workflows/make-video.yml"
 
 permissions:
   contents: read
