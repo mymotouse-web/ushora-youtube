@@ -201,8 +201,12 @@ def build_segment(visual, kind, dur, W, H, fps, out):
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps},"
               f"eq=brightness=-0.06,{fade},format=yuv420p")
         ffmpeg("-stream_loop", "-1", "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
-    else:  # card image with slow pan
-        vf = (f"crop={W}:{H}:x='(iw-{W})*t/{dur:.3f}':y='(ih-{H})/2',{fade},format=yuv420p")
+    else:  # card image with gentle animated zoom
+        # Tech cards contain circuit artwork; this slow zoom adds visible motion
+        # while keeping the center text readable.
+        vf = (f"zoompan=z='min(zoom+0.0008,1.08)':"
+              f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+              f"d=1:s={W}x{H}:fps={fps},{fade},format=yuv420p")
         ffmpeg("-loop", "1", "-framerate", str(fps), "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
 
 
