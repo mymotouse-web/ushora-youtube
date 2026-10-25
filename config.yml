@@ -45,7 +45,7 @@ subtitles:
 
 visuals:
   enabled: true
-  use_pexels: false
+  use_pexels: true
 
 music:
   enabled: true
