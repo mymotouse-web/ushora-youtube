@@ -2,6 +2,15 @@ name: Make video
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Test uses built-in script; real uses Gemini + fresh tech topics"
+        required: true
+        type: choice
+        options:
+          - test
+          - real
+        default: test
   push:
     paths:
       - "config.yml"
@@ -36,9 +45,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate test video
+      - name: Generate video
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python main.py --mode test --out out --work work
+          MODE="${{ inputs.mode || 'test' }}"
+          python main.py --mode "$MODE" --out out --work work
 
       - name: Save generated video
         uses: actions/upload-artifact@v4
