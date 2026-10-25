@@ -38,7 +38,7 @@ jobs:
 
       - name: Generate test video
         run: |
-          python main.py --mode test --fake-tts --out out --work work
+          python main.py --mode test --out out --work work
 
       - name: Save generated video
         uses: actions/upload-artifact@v4
