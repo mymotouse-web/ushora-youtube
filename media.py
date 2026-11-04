@@ -72,7 +72,7 @@ def tts_edge(text, cfg, path):
 
 
 def tts_espeak(text, cfg, path):
-    sh(["espeak-ng", "-v", "hi", "-s", "150", "-w", path, text])
+    sh(["espeak-ng", "-v", "hi", "-s", "175", "-w", path, text])
 
 
 def tts_fake(text, cfg, path):
