@@ -284,23 +284,23 @@ def _rule_based_script(topic, article, cfg):
 
     scenes = [
         {"voice": "नमस्ते! USHORA पर आज की AI खबर समझते हैं।",
-         "caption": "Namaste! USHORA par aaj ki AI khabar samajhte hain.",
+         "caption": "नमस्ते! USHORA पर आज की AI खबर समझते हैं।",
          "visual_query": "technology news studio", "card_text": "TECH UPDATE"},
         {"voice": f"आज की खबर का विषय है: {topic['title']}।",
-         "caption": f"Aaj ki khabar ka vishay hai: {topic['title']}.",
+         "caption": "आज की खबर का विषय है: " + topic['title'] + "।",
          "visual_query": "digital technology headlines", "card_text": "AAJ KI KHABAR"},
     ]
     for i, sentence in enumerate(sentences[:2]):
-        voice = ("इस source में बताया गया है: " if i == 0 else "Source की अगली जानकारी है: ") + sentence
+        voice = ("इस खबर में बताया गया है: " if i == 0 else "आगे की जानकारी के अनुसार: ") + sentence
         scenes.append({"voice": voice, "caption": voice,
                        "visual_query": "technology data visualization",
                        "card_text": f"SOURCE POINT {i + 1}"})
     scenes.extend([
         {"voice": "ज़्यादा जानकारी के लिए description में original source देखें।",
-         "caption": "Zyada jaankari ke liye description mein original source dekhein.",
+         "caption": "ज़्यादा जानकारी के लिए description में original source देखें।",
          "visual_query": "research laptop screen", "card_text": "SOURCE CHECK"},
         {"voice": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
-         "caption": "Aapki rai kya hai? Comment karein aur USHORA ko subscribe karein.",
+         "caption": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
          "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"},
     ])
     return {
@@ -327,7 +327,7 @@ def make_real_script(cfg, history):
             topic = cands[idx if 0 <= idx < len(cands) else 0]
             article = fetch_article_text(topic["link"], topic["summary"])
             prompt = f"""Write an original, concise Hinglish script for {cfg['channel']['name']}.
-Use ONLY facts supported by this source. Hindi voice in Devanagari; captions in Roman Hinglish.
+Use ONLY source-supported facts. VOICE: speak naturally in Hindi using Devanagari; English only for common technical terms and product names (AI, software, app, data, smartphone). Never speak full English sentences or read English headlines verbatim. Explain source facts in simple Hindi. CAPTIONS: Devanagari Hindi matching the voice.
 SOURCE TITLE: {topic['title']}
 SOURCE TEXT: {article}
 Return JSON with title, description, tags, thumbnail_text and 8-12 scenes
