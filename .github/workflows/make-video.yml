@@ -57,6 +57,31 @@ jobs:
           if [ "$MODE" = "real-free" ]; then MODE="real"; fi
           python main.py --mode "$MODE" --out out --work work
 
+      - name: Validate generated video
+        run: |
+          test -s out/video.mp4
+          test -s out/metadata.json
+          python - <<'PY'
+          import json, subprocess
+          info = json.loads(subprocess.check_output([
+              "ffprobe", "-v", "error", "-show_streams", "-show_format",
+              "-of", "json", "out/video.mp4"
+          ], text=True))
+          streams = info.get("streams", [])
+          video = next((s for s in streams if s.get("codec_type") == "video"), None)
+          audio = next((s for s in streams if s.get("codec_type") == "audio"), None)
+          assert video is not None, "No video stream found"
+          assert audio is not None, "No audio stream found"
+          assert (video.get("width"), video.get("height")) == (1080, 1920), (
+              f"Expected 1080x1920 portrait, got {video.get('width')}x{video.get('height')}"
+          )
+          seconds = float(info["format"]["duration"])
+          assert 5 <= seconds <= 180, f"Unexpected duration: {seconds:.1f}s"
+          meta = json.load(open("out/metadata.json", encoding="utf-8"))
+          assert abs(float(meta["duration_seconds"]) - seconds) < 2.0, "Metadata duration mismatch"
+          print(f"QA PASS: {seconds:.1f}s, 1080x1920, video+audio streams, metadata present")
+          PY
+
       - name: Save generated video
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
