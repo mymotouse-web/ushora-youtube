@@ -259,7 +259,7 @@ def join_visuals(work, timeline, count, fps):
         current = f"v{i}"
         if i == count - 1:
             extra = transition * (count - 1)
-            graph.append(f"[{i}:v]tpad=stop_mode=clone:stop_duration={extra:.3f},settb=AVTB,format=yuv420p[v{i}p]")
+            graph.append(f"[v{i}]tpad=stop_mode=clone:stop_duration={extra:.3f},settb=AVTB,format=yuv420p[v{i}p]")
             current = f"v{i}p"
         offset = max(0.0, elapsed - transition * i)
         out_label = f"x{i}"
