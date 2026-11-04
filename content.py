@@ -277,12 +277,12 @@ def gemini_json(cfg, prompt, temperature=0.8):
 def _rule_based_script(topic, article, cfg):
     """Create a Hindi-first source-led brief without an LLM or paid API."""
     raw = _clean(article or topic.get("summary", ""))
-    sentences = [re.sub(r"\\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\\s+", raw)]
+    sentences = [re.sub(r"\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\s+", raw)]
     # Never send English source sentences directly to Hindi TTS.
     hindi_sentences = [
         x for x in sentences
         if len(x.split()) >= 7 and len(x) <= 320
-        and len(re.findall(r"[\\u0900-\\u097f]", x)) >= 12
+        and len(re.findall(r"[\u0900-\u097f]", x)) >= 12
     ]
 
     scenes = [
