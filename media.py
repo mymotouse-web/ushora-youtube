@@ -152,37 +152,36 @@ def make_card(path, W, H, idx, text, accent):
         d.line([(0, y), (w, y)], fill=(255, 255, 255, 14), width=1)
     img = Image.alpha_composite(img, grid)
 
-    # Tech-themed HUD artwork: circuit traces, nodes and a central chip.
+    # Pick one of six distinct layouts. Draw only that layout so motifs do not
+    # all inherit the same chip/equalizer artwork underneath.
     hud = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     hd = ImageDraw.Draw(hud)
     accent_rgba = hex_rgb(accent) + (170,)
-    cx, cy = w // 2, int(h * 0.68)
-    radius = int(min(w, h) * 0.16)
-    # Subtle orbital rings and a central processor tile.
-    for rr, alpha, width in ((radius, 100, 5), (int(radius * 1.28), 65, 3), (int(radius * 1.55), 40, 2)):
-        hd.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=hex_rgb(accent) + (alpha,), width=width)
-    chip = int(radius * 0.72)
-    hd.rounded_rectangle([cx-chip, cy-chip, cx+chip, cy+chip], radius=22,
-                         outline=accent_rgba, width=7, fill=(5, 15, 35, 150))
-    # Circuit lines vary by scene index so cards are not identical.
-    for j in range(8):
-        side = -1 if j % 2 == 0 else 1
-        yy = cy - chip + (j // 2) * max(1, chip // 2)
-        start_x = cx + side * chip
-        end_x = start_x + side * int(w * (0.08 + 0.025 * (j % 3)))
-        bend_y = yy + (1 if (j + idx) % 2 else -1) * int(h * 0.025)
-        hd.line([(start_x, yy), (end_x, yy), (end_x, bend_y)], fill=accent_rgba, width=4)
-        hd.ellipse([end_x-7, bend_y-7, end_x+7, bend_y+7], fill=accent_rgba)
-    # A small equalizer motif adds visual rhythm without hiding the headline.
-    bar_base, bar_w = int(h * 0.87), max(8, int(w * 0.018))
-    for j in range(9):
-        bh = int(h * (0.018 + 0.012 * ((j * 7 + idx * 3) % 5)))
-        bx = int(w * 0.27) + j * int(w * 0.055)
-        hd.rounded_rectangle([bx, bar_base-bh, bx+bar_w, bar_base], radius=bar_w//2,
-                             fill=hex_rgb(accent) + (110 + (j % 3) * 40,))
-    # Give each scene a distinct visual motif instead of repeating one chip layout.
-    style = random.randrange(6)  # choose a fresh visual motif for every scene/render
-    if style == 1:
+    style = random.randrange(6)
+    if style == 0:
+        # Processor / circuit-board layout.
+        cx, cy = w // 2, int(h * 0.68)
+        radius = int(min(w, h) * 0.16)
+        for rr, alpha, width in ((radius, 100, 5), (int(radius * 1.28), 65, 3), (int(radius * 1.55), 40, 2)):
+            hd.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], outline=hex_rgb(accent) + (alpha,), width=width)
+        chip = int(radius * 0.72)
+        hd.rounded_rectangle([cx-chip, cy-chip, cx+chip, cy+chip], radius=22,
+                             outline=accent_rgba, width=7, fill=(5, 15, 35, 150))
+        for j in range(8):
+            side = -1 if j % 2 == 0 else 1
+            yy = cy - chip + (j // 2) * max(1, chip // 2)
+            start_x = cx + side * chip
+            end_x = start_x + side * int(w * (0.08 + 0.025 * (j % 3)))
+            bend_y = yy + (1 if (j + idx) % 2 else -1) * int(h * 0.025)
+            hd.line([(start_x, yy), (end_x, yy), (end_x, bend_y)], fill=accent_rgba, width=4)
+            hd.ellipse([end_x-7, bend_y-7, end_x+7, bend_y+7], fill=accent_rgba)
+        bar_base, bar_w = int(h * 0.87), max(8, int(w * 0.018))
+        for j in range(9):
+            bh = int(h * (0.018 + 0.012 * ((j * 7 + idx * 3) % 5)))
+            bx = int(w * 0.27) + j * int(w * 0.055)
+            hd.rounded_rectangle([bx, bar_base-bh, bx+bar_w, bar_base], radius=bar_w//2,
+                                 fill=hex_rgb(accent) + (110 + (j % 3) * 40,))
+    elif style == 1:
         # Diagonal energy rails and floating data nodes.
         for j in range(6):
             yy = int(h * (0.20 + j * 0.105))
@@ -199,7 +198,7 @@ def make_card(path, W, H, idx, text, accent):
         hd.line([(rx, ry), (rx-int(w*.18), ry-int(h*.16))], fill=accent_rgba, width=8)
         hd.ellipse([rx-20, ry-20, rx+20, ry+20], fill=(255,255,255,220))
     elif style == 3:
-        # Audio waveform bars for a more energetic explainer beat.
+        # Audio waveform bars.
         base = int(h * 0.73)
         for j in range(31):
             x = int(w * 0.12) + j * int(w * 0.025)
@@ -207,7 +206,7 @@ def make_card(path, W, H, idx, text, accent):
             hd.rounded_rectangle([x, base-bh, x+max(5,int(w*.009)), base+bh],
                                  radius=8, fill=hex_rgb(accent) + (150,))
     elif style == 4:
-        # Hexagonal data mesh with pulsing-style node rings.
+        # Hexagonal data mesh.
         step = int(min(w, h) * 0.075)
         for row in range(5):
             for col in range(4):
@@ -219,7 +218,7 @@ def make_card(path, W, H, idx, text, accent):
                 if col < 3:
                     hd.line([(x+rr, y), (x+step-rr, y)], fill=hex_rgb(accent)+(95,), width=3)
     elif style == 5:
-        # Orbital paths and satellites for a space-tech visual.
+        # Orbital paths and satellites.
         ox, oy = int(w * 0.70), int(h * 0.62)
         for j, angle in enumerate((0, 45, 90, 135)):
             rr = int(min(w, h) * (0.12 + j * 0.045))
