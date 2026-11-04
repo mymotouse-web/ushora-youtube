@@ -181,7 +181,7 @@ def make_card(path, W, H, idx, text, accent):
         hd.rounded_rectangle([bx, bar_base-bh, bx+bar_w, bar_base], radius=bar_w//2,
                              fill=hex_rgb(accent) + (110 + (j % 3) * 40,))
     # Give each scene a distinct visual motif instead of repeating one chip layout.
-    style = idx % 4
+    style = random.randrange(6)  # choose a fresh visual motif for every scene/render
     if style == 1:
         # Diagonal energy rails and floating data nodes.
         for j in range(6):
@@ -206,6 +206,29 @@ def make_card(path, W, H, idx, text, accent):
             bh = int(h * (0.025 + 0.075 * abs(math.sin((j + idx) * 0.72))))
             hd.rounded_rectangle([x, base-bh, x+max(5,int(w*.009)), base+bh],
                                  radius=8, fill=hex_rgb(accent) + (150,))
+    elif style == 4:
+        # Hexagonal data mesh with pulsing-style node rings.
+        step = int(min(w, h) * 0.075)
+        for row in range(5):
+            for col in range(4):
+                x = int(w * 0.16) + col * step + (row % 2) * (step // 2)
+                y = int(h * 0.30) + row * step
+                rr = max(10, step // 7)
+                hd.ellipse([x-rr, y-rr, x+rr, y+rr], outline=accent_rgba, width=5)
+                hd.ellipse([x-5, y-5, x+5, y+5], fill=(255,255,255,210))
+                if col < 3:
+                    hd.line([(x+rr, y), (x+step-rr, y)], fill=hex_rgb(accent)+(95,), width=3)
+    elif style == 5:
+        # Orbital paths and satellites for a space-tech visual.
+        ox, oy = int(w * 0.70), int(h * 0.62)
+        for j, angle in enumerate((0, 45, 90, 135)):
+            rr = int(min(w, h) * (0.12 + j * 0.045))
+            hd.ellipse([ox-rr, oy-rr//2, ox+rr, oy+rr//2],
+                       outline=hex_rgb(accent)+(115,), width=5)
+            rad = math.radians(angle + idx * 17)
+            sx = ox + int(rr * math.cos(rad))
+            sy = oy + int((rr//2) * math.sin(rad))
+            hd.ellipse([sx-13, sy-13, sx+13, sy+13], fill=accent_rgba)
     img = Image.alpha_composite(img, hud)
     if text:
         d = ImageDraw.Draw(img)
