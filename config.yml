@@ -19,6 +19,20 @@ content:
 
 topics:
   max_age_days: 7
+  keywords:
+    - artificial intelligence
+    - AI
+    - machine learning
+    - chatbot
+    - technology
+    - smartphone
+    - software
+    - cybersecurity
+  feeds:
+    - https://techcrunch.com/feed/
+    - https://www.theverge.com/rss/index.xml
+    - https://www.wired.com/feed/rss
+  use_hacker_news: true
 
 llm:
   model: "gemini-2.0-flash"
