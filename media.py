@@ -258,8 +258,22 @@ def build_segment(visual, kind, dur, W, H, fps, out):
               "eq=brightness=-0.06,format=yuv420p")
         ffmpeg("-stream_loop", "-1", "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
     else:
-        vf = (f"zoompan=z='min(zoom+0.0008,1.08)':"
-              f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+        # Vary camera movement per scene so animated cards do not all move alike.
+        motion = random.choice(("zoom_in", "zoom_out", "pan_left", "pan_right"))
+        frames = max(1, int(dur * fps))
+        if motion == "zoom_out":
+            z = "if(eq(on,1),1.08,max(zoom-0.0008,1.0))"
+            x = "iw/2-(iw/zoom/2)"
+        elif motion == "pan_left":
+            z = "1.08"
+            x = f"(iw-iw/zoom)*(1-on/{frames})"
+        elif motion == "pan_right":
+            z = "1.08"
+            x = f"(iw-iw/zoom)*on/{frames}"
+        else:
+            z = "min(zoom+0.0008,1.08)"
+            x = "iw/2-(iw/zoom/2)"
+        vf = (f"zoompan=z='{z}':x='{x}':y='ih/2-(ih/zoom/2)':"
               f"d=1:s={W}x{H}:fps={fps},format=yuv420p")
         ffmpeg("-loop", "1", "-framerate", str(fps), "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
 
