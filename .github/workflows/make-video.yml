@@ -51,7 +51,7 @@ jobs:
       - name: Generate video
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          USHORA_FORCE_FREE_SCRIPT: ${{ inputs.mode == 'real-free' && '1' || '0' }}
+          USHORA_FORCE_FREE_SCRIPT: ${{ (github.event_name == 'push' || inputs.mode == 'real-free') && '1' || '0' }}
         run: |
           MODE="${{ inputs.mode || 'real-free' }}"
           if [ "$MODE" = "real-free" ]; then MODE="real"; fi
