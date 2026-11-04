@@ -274,50 +274,71 @@ def gemini_json(cfg, prompt, temperature=0.8):
     raise RuntimeError(f"Gemini request failed after retries: {last_error or 'unknown API error'}. "
                        "Check the exact message above for quota, billing, model access, or network issues.")
 
+def _rule_based_script(topic, article, cfg):
+    """Create a cautious source-led brief without an LLM or paid API."""
+    raw = _clean(article or topic.get("summary", ""))
+    sentences = [re.sub(r"\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?])\s+", raw)]
+    sentences = [x for x in sentences if len(x.split()) >= 7 and len(x) <= 320]
+    if not sentences:
+        raise RuntimeError("Source text is too short for a reliable free script; skipping this topic.")
+
+    scenes = [
+        {"voice": "नमस्ते दोस्तों! आज USHORA पर एक नया AI और Technology update समझते हैं।",
+         "caption": "Namaste doston! Aaj USHORA par ek naya AI aur Technology update samajhte hain.",
+         "visual_query": "technology news studio", "card_text": "TECH UPDATE"},
+        {"voice": f"आज की खबर का विषय है: {topic['title']}।",
+         "caption": f"Aaj ki khabar ka vishay hai: {topic['title']}.",
+         "visual_query": "digital technology headlines", "card_text": "AAJ KI KHABAR"},
+    ]
+    for i, sentence in enumerate(sentences[:5]):
+        voice = ("इस source में बताया गया है: " if i == 0 else "Source की अगली जानकारी है: ") + sentence
+        scenes.append({"voice": voice, "caption": voice,
+                       "visual_query": "technology data visualization",
+                       "card_text": f"SOURCE POINT {i + 1}"})
+    scenes.extend([
+        {"voice": "यह brief उपलब्ध source पर आधारित है। पूरी जानकारी के लिए description में original source देखें।",
+         "caption": "Yeh brief available source par based hai. Puri jaankari ke liye description mein original source dekhein.",
+         "visual_query": "research laptop screen", "card_text": "SOURCE CHECK"},
+        {"voice": "आपकी इस update पर क्या राय है? Comment में बताइए और ऐसे videos के लिए USHORA को subscribe करें।",
+         "caption": "Aapki is update par kya rai hai? Comment mein bataiye aur aise videos ke liye USHORA ko subscribe karein.",
+         "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"},
+    ])
+    return {
+        "title": topic["title"][:65],
+        "description": f"Is video mein source-led technology brief diya gaya hai. Original source: {topic['link']}",
+        "tags": ["AI", "Technology", "Tech News", "Hinglish", "USHORA", "AI Update"],
+        "thumbnail_text": "TECH UPDATE",
+        "scenes": scenes,
+    }
+
+
 def make_real_script(cfg, history):
     cands = fetch_candidates(cfg, history)
     if not cands:
-        raise RuntimeError("No fresh topics found. Try increasing topics.max_age_days in config.yml.")
-    listing = "\n".join(f"{i}. {c['title']} -- {c['summary'][:200]}" for i, c in enumerate(cands))
-    pick = gemini_json(cfg, (
-        f"You are the editor of a Hinglish YouTube channel for {cfg['channel']['audience']}.\n"
-        "Choose ONE story below that is most interesting, useful or surprising for them. "
-        "Avoid rumours, politics, and anything sensitive or unverified.\n"
-        f"{listing}\n\nReturn JSON: {{\"index\": <number>, \"reason\": \"<short>\"}}"), temperature=0.3)
-    idx = int(pick.get("index", 0))
-    topic = cands[idx if 0 <= idx < len(cands) else 0]
+        raise RuntimeError("No fresh topics found. Check topics.feeds/keywords or increase topics.max_age_days.")
+    if os.environ.get("GEMINI_API_KEY", "").strip():
+        try:
+            listing = "\n".join(f"{i}. {c['title']} -- {c['summary'][:200]}" for i, c in enumerate(cands))
+            pick = gemini_json(cfg, (
+                f"You are the editor of a Hinglish YouTube channel for {cfg['channel']['audience']}.\n"
+                "Choose ONE useful, source-supported story. Avoid rumours and unverified claims.\n"
+                f"{listing}\n\nReturn JSON: {{\"index\": <number>, \"reason\": \"<short>\"}}"), temperature=0.3)
+            idx = int(pick.get("index", 0))
+            topic = cands[idx if 0 <= idx < len(cands) else 0]
+            article = fetch_article_text(topic["link"], topic["summary"])
+            prompt = f"""Write an original, concise Hinglish script for {cfg['channel']['name']}.
+Use ONLY facts supported by this source. Hindi voice in Devanagari; captions in Roman Hinglish.
+SOURCE TITLE: {topic['title']}
+SOURCE TEXT: {article}
+Return JSON with title, description, tags, thumbnail_text and 8-12 scenes
+(each scene has voice, caption, visual_query, card_text). Do not invent facts."""
+            return topic, gemini_json(cfg, prompt, temperature=0.7)
+        except Exception as ex:
+            print(f"[llm] Gemini unavailable; using free source-led fallback ({type(ex).__name__}).")
+    topic = cands[0]
     article = fetch_article_text(topic["link"], topic["summary"])
-    words = int(cfg["video"].get("target_minutes", 3) * 130)
-
-    prompt = f"""You write scripts for the YouTube channel "{cfg['channel']['name']}" ({cfg['channel']['audience']}).
-Narrator: a friendly, confident male presenter speaking natural Hinglish (Hindi + common English tech words).
-
-SOURCE ARTICLE (facts you may use):
-Title: {topic['title']}
-Text: {article}
-
-RULES
-- Write an ORIGINAL explanation in your own words. Do not copy sentences from the source.
-- Use ONLY facts present in the source text. Do not invent numbers, dates, names or quotes.
-  If unsure, say "reports ke mutabik" (according to reports).
-- Start with a strong hook in the first 5 seconds. End with a short call to action and a question for comments.
-- About {words} spoken words in total, split into 10-16 short scenes (each scene = 1-2 short sentences, max 28 words).
-- "voice": what the narrator says. Write Hindi words in DEVANAGARI script and keep English tech terms (AI, chip, app) in Latin letters.
-  Spell out symbols (write "प्रतिशत", not "%").
-- "caption": the SAME sentence written in ROMAN Hinglish for subtitles.
-- "visual_query": 2-4 English words for stock video search (generic, safe, e.g. "server room", "smartphone screen").
-- "card_text": 2-4 word ALL-CAPS Roman label for the on-screen card.
-- "thumbnail_text": 2-5 word ALL-CAPS Roman Hinglish hook, no clickbait lies.
-- "title": under 70 characters, Roman Hinglish/English, honest. No angle brackets.
-- "description": 3-5 lines Roman Hinglish summary. Do not add links.
-- "tags": 8-12 relevant tags.
-
-Return ONLY JSON:
-{{"title": "...", "description": "...", "tags": ["..."], "thumbnail_text": "...",
-  "scenes": [{{"voice": "...", "caption": "...", "visual_query": "...", "card_text": "..."}}]}}"""
-    script = gemini_json(cfg, prompt, temperature=0.8)
-    return topic, script
-
+    print("[script] using no-API rule-based source-led brief.")
+    return topic, _rule_based_script(topic, article, cfg)
 
 # ----------------------------------------------------------------------------
 def validate_script(script, cfg):
