@@ -1,5 +1,7 @@
 name: Make video
 
+# SHA-pinned actions verified for repository policy
+
 on:
   workflow_dispatch:
     inputs:
