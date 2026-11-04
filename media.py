@@ -1,5 +1,6 @@
 """Voice, visuals, subtitles, music, FFmpeg assembly and thumbnail."""
 import asyncio
+import math
 import os
 import pathlib
 import random
