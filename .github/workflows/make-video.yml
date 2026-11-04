@@ -6,12 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "Test uses built-in script; real uses Gemini + fresh tech topics"
+        description: "test = built-in demo; real = Gemini if configured; real-free = RSS/HN + no API"
         required: true
         type: choice
         options:
           - test
           - real
+          - real-free
         default: test
   push:
     paths:
@@ -50,8 +51,10 @@ jobs:
       - name: Generate video
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          USHORA_FORCE_FREE_SCRIPT: ${{ inputs.mode == 'real-free' && '1' || '0' }}
         run: |
           MODE="${{ inputs.mode || 'test' }}"
+          if [ "$MODE" = "real-free" ]; then MODE="real"; fi
           python main.py --mode "$MODE" --out out --work work
 
       - name: Save generated video
