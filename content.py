@@ -275,38 +275,51 @@ def gemini_json(cfg, prompt, temperature=0.8):
                        "Check the exact message above for quota, billing, model access, or network issues.")
 
 def _rule_based_script(topic, article, cfg):
-    """Create a cautious source-led brief without an LLM or paid API."""
+    """Create a Hindi-first source-led brief without an LLM or paid API."""
     raw = _clean(article or topic.get("summary", ""))
-    sentences = [re.sub(r"\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?])\s+", raw)]
-    sentences = [x for x in sentences if len(x.split()) >= 7 and len(x) <= 320]
-    if not sentences:
-        raise RuntimeError("Source text is too short for a reliable free script; skipping this topic.")
+    sentences = [re.sub(r"\\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\\s+", raw)]
+    # Never send English source sentences directly to Hindi TTS.
+    hindi_sentences = [
+        x for x in sentences
+        if len(x.split()) >= 7 and len(x) <= 320
+        and len(re.findall(r"[\\u0900-\\u097f]", x)) >= 12
+    ]
 
     scenes = [
-        {"voice": "नमस्ते! USHORA पर आज की AI खबर समझते हैं।",
-         "caption": "नमस्ते! USHORA पर आज की AI खबर समझते हैं।",
+        {"voice": "नमस्ते! USHORA पर आज की तकनीकी खबर का आसान अपडेट सुनिए।",
+         "caption": "नमस्ते! USHORA पर आज की तकनीकी खबर का आसान अपडेट सुनिए।",
          "visual_query": "technology news studio", "card_text": "TECH UPDATE"},
-        {"voice": f"आज की खबर का विषय है: {topic['title']}।",
-         "caption": "आज की खबर का विषय है: " + topic['title'] + "।",
-         "visual_query": "digital technology headlines", "card_text": "AAJ KI KHABAR"},
+        {"voice": "इस खबर का मूल स्रोत description में दिया गया है।",
+         "caption": "इस खबर का मूल स्रोत description में दिया गया है।",
+         "visual_query": "digital technology headlines", "card_text": "SOURCE"},
     ]
-    for i, sentence in enumerate(sentences[:2]):
-        voice = ("इस खबर में बताया गया है: " if i == 0 else "आगे की जानकारी के अनुसार: ") + sentence
-        scenes.append({"voice": voice, "caption": voice,
-                       "visual_query": "technology data visualization",
-                       "card_text": f"SOURCE POINT {i + 1}"})
-    scenes.extend([
-        {"voice": "ज़्यादा जानकारी के लिए description में original source देखें।",
-         "caption": "ज़्यादा जानकारी के लिए description में original source देखें।",
-         "visual_query": "research laptop screen", "card_text": "SOURCE CHECK"},
-        {"voice": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
-         "caption": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
-         "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"},
-    ])
+    if hindi_sentences:
+        for i, sentence in enumerate(hindi_sentences[:2]):
+            voice = ("स्रोत के अनुसार: " if i == 0 else "लेख में आगे बताया गया है: ") + sentence
+            scenes.append({"voice": voice, "caption": voice,
+                           "visual_query": "technology data visualization",
+                           "card_text": f"SOURCE POINT {i + 1}"})
+    else:
+        # Be transparent rather than reading English text with a Hindi voice or inventing a translation.
+        scenes.append({
+            "voice": "इस स्रोत का लेख अंग्रेज़ी में है, इसलिए हम उसकी बातों का गलत अनुवाद नहीं करेंगे।",
+            "caption": "इस स्रोत का लेख अंग्रेज़ी में है, इसलिए हम उसकी बातों का गलत अनुवाद नहीं करेंगे।",
+            "visual_query": "research laptop screen", "card_text": "SOURCE IN ENGLISH"
+        })
+        scenes.append({
+            "voice": "पूरी और सही जानकारी के लिए description में दिया गया original source पढ़ें।",
+            "caption": "पूरी और सही जानकारी के लिए description में दिया गया original source पढ़ें।",
+            "visual_query": "technology research screen", "card_text": "READ THE SOURCE"
+        })
+    scenes.append({
+        "voice": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
+        "caption": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
+        "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"
+    })
     return {
         "title": topic["title"][:65],
-        "description": f"Is video mein source-led technology brief diya gaya hai. Original source: {topic['link']}",
-        "tags": ["AI", "Technology", "Tech News", "Hinglish", "USHORA", "AI Update"],
+        "description": f"इस वीडियो में स्रोत के आधार पर तकनीकी अपडेट दिया गया है। Original source: {topic['link']}",
+        "tags": ["AI", "Technology", "Tech News", "Hindi", "USHORA", "AI Update"],
         "thumbnail_text": "TECH UPDATE",
         "scenes": scenes,
     }
