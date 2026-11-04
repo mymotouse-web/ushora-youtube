@@ -283,24 +283,24 @@ def _rule_based_script(topic, article, cfg):
         raise RuntimeError("Source text is too short for a reliable free script; skipping this topic.")
 
     scenes = [
-        {"voice": "नमस्ते दोस्तों! आज USHORA पर एक नया AI और Technology update समझते हैं।",
-         "caption": "Namaste doston! Aaj USHORA par ek naya AI aur Technology update samajhte hain.",
+        {"voice": "नमस्ते! USHORA पर आज की AI खबर समझते हैं।",
+         "caption": "Namaste! USHORA par aaj ki AI khabar samajhte hain.",
          "visual_query": "technology news studio", "card_text": "TECH UPDATE"},
         {"voice": f"आज की खबर का विषय है: {topic['title']}।",
          "caption": f"Aaj ki khabar ka vishay hai: {topic['title']}.",
          "visual_query": "digital technology headlines", "card_text": "AAJ KI KHABAR"},
     ]
-    for i, sentence in enumerate(sentences[:5]):
+    for i, sentence in enumerate(sentences[:2]):
         voice = ("इस source में बताया गया है: " if i == 0 else "Source की अगली जानकारी है: ") + sentence
         scenes.append({"voice": voice, "caption": voice,
                        "visual_query": "technology data visualization",
                        "card_text": f"SOURCE POINT {i + 1}"})
     scenes.extend([
-        {"voice": "यह brief उपलब्ध source पर आधारित है। पूरी जानकारी के लिए description में original source देखें।",
-         "caption": "Yeh brief available source par based hai. Puri jaankari ke liye description mein original source dekhein.",
+        {"voice": "ज़्यादा जानकारी के लिए description में original source देखें।",
+         "caption": "Zyada jaankari ke liye description mein original source dekhein.",
          "visual_query": "research laptop screen", "card_text": "SOURCE CHECK"},
-        {"voice": "आपकी इस update पर क्या राय है? Comment में बताइए और ऐसे videos के लिए USHORA को subscribe करें।",
-         "caption": "Aapki is update par kya rai hai? Comment mein bataiye aur aise videos ke liye USHORA ko subscribe karein.",
+        {"voice": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
+         "caption": "Aapki rai kya hai? Comment karein aur USHORA ko subscribe karein.",
          "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"},
     ])
     return {
