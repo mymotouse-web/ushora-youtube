@@ -179,18 +179,51 @@ def make_card(path, W, H, idx, text, accent):
         bx = int(w * 0.27) + j * int(w * 0.055)
         hd.rounded_rectangle([bx, bar_base-bh, bx+bar_w, bar_base], radius=bar_w//2,
                              fill=hex_rgb(accent) + (110 + (j % 3) * 40,))
+    # Give each scene a distinct visual motif instead of repeating one chip layout.
+    style = idx % 4
+    if style == 1:
+        # Diagonal energy rails and floating data nodes.
+        for j in range(6):
+            yy = int(h * (0.20 + j * 0.105))
+            hd.line([(int(w * 0.08), yy), (int(w * 0.42), yy - int(h * 0.12))],
+                    fill=hex_rgb(accent) + (105,), width=5)
+            x = int(w * (0.62 + 0.045 * (j % 3)))
+            hd.ellipse([x-16, yy-16, x+16, yy+16], fill=accent_rgba)
+    elif style == 2:
+        # Radar sweep / concentric target.
+        rx, ry = int(w * 0.76), int(h * 0.67)
+        for rr in (int(min(w,h)*0.10), int(min(w,h)*0.18), int(min(w,h)*0.27)):
+            hd.arc([rx-rr, ry-rr, rx+rr, ry+rr], start=205, end=520,
+                   fill=hex_rgb(accent) + (145,), width=7)
+        hd.line([(rx, ry), (rx-int(w*.18), ry-int(h*.16))], fill=accent_rgba, width=8)
+        hd.ellipse([rx-20, ry-20, rx+20, ry+20], fill=(255,255,255,220))
+    elif style == 3:
+        # Audio waveform bars for a more energetic explainer beat.
+        base = int(h * 0.73)
+        for j in range(31):
+            x = int(w * 0.12) + j * int(w * 0.025)
+            bh = int(h * (0.025 + 0.075 * abs(math.sin((j + idx) * 0.72))))
+            hd.rounded_rectangle([x, base-bh, x+max(5,int(w*.009)), base+bh],
+                                 radius=8, fill=hex_rgb(accent) + (150,))
     img = Image.alpha_composite(img, hud)
     if text:
         d = ImageDraw.Draw(img)
-        fs = int(min(W, H) * 0.075)
-        lines = textwrap.wrap(text.upper(), 16 if H > W else 24)[:3]
+        fs = int(min(W, H) * (0.082 if idx == 0 else 0.070))
+        lines = textwrap.wrap(text.upper(), 13 if H > W else 22)[:3]
         f = font(fs)
-        y = int(h * 0.30) - (len(lines) * fs) // 2
+        # Alternate title placement to create a deliberate scene-to-scene rhythm.
+        if idx % 3 == 1:
+            x0, y = int(w * 0.09), int(h * 0.22)
+        elif idx % 3 == 2:
+            x0, y = int(w * 0.09), int(h * 0.34)
+        else:
+            x0, y = int(w * 0.10), int(h * 0.27)
         for ln in lines:
-            tw = d.textlength(ln, font=f)
-            d.text(((w - tw) / 2, y), ln, font=f, fill=(255, 255, 255, 235), stroke_width=3, stroke_fill=(0, 0, 0, 160))
-            y += int(fs * 1.2)
-        d.rectangle([w / 2 - 90, y + 10, w / 2 + 90, y + 18], fill=hex_rgb(accent) + (255,))
+            d.text((x0, y), ln, font=f, fill=(255, 255, 255, 245),
+                   stroke_width=4, stroke_fill=(0, 0, 0, 175))
+            y += int(fs * 1.18)
+        d.rounded_rectangle([x0, y + 18, x0 + int(w * 0.34), y + 31],
+                            radius=7, fill=hex_rgb(accent) + (255,))
     img.convert("RGB").save(path, quality=92)
 
 
