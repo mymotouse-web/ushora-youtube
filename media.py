@@ -127,13 +127,21 @@ def pexels_clip(query, used, dest, W, H, key):
     return None
 
 
-PALETTES = [((8, 12, 40), (40, 12, 90)), ((5, 25, 45), (10, 80, 110)),
-            ((30, 8, 40), (110, 25, 80)), ((6, 30, 30), (12, 95, 80))]
+PALETTES = [
+    ((8, 12, 40), (40, 12, 90)),       # midnight violet
+    ((5, 25, 45), (10, 80, 110)),      # deep ocean
+    ((30, 8, 40), (110, 25, 80)),      # magenta dusk
+    ((6, 30, 30), (12, 95, 80)),       # emerald circuit
+    ((28, 18, 5), (105, 55, 12)),     # amber / bronze
+    ((8, 20, 28), (15, 65, 75)),       # arctic teal
+    ((24, 8, 18), (92, 24, 45)),      # crimson pulse
+    ((14, 18, 38), (48, 65, 105)),    # steel blue
+]
 
 
 def make_card(path, W, H, idx, text, accent):
     w, h = int(W * 1.15), int(H * 1.15)
-    c1, c2 = PALETTES[idx % len(PALETTES)]
+    c1, c2 = random.choice(PALETTES)
     mid = tuple((a + b) // 2 for a, b in zip(c1, c2))
     g = Image.new("RGB", (2, 2))
     g.putpixel((0, 0), c1); g.putpixel((1, 0), mid); g.putpixel((0, 1), mid); g.putpixel((1, 1), c2)
