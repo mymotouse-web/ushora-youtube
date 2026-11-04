@@ -53,7 +53,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           USHORA_FORCE_FREE_SCRIPT: ${{ inputs.mode == 'real-free' && '1' || '0' }}
         run: |
-          MODE="${{ inputs.mode || 'test' }}"
+          MODE="${{ inputs.mode || 'real-free' }}"
           if [ "$MODE" = "real-free" ]; then MODE="real"; fi
           python main.py --mode "$MODE" --out out --work work
 
