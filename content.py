@@ -316,7 +316,7 @@ def make_real_script(cfg, history):
     cands = fetch_candidates(cfg, history)
     if not cands:
         raise RuntimeError("No fresh topics found. Check topics.feeds/keywords or increase topics.max_age_days.")
-    if os.environ.get("GEMINI_API_KEY", "").strip():
+    if os.environ.get("GEMINI_API_KEY", "").strip() and os.environ.get("USHORA_FORCE_FREE_SCRIPT") != "1":
         try:
             listing = "\n".join(f"{i}. {c['title']} -- {c['summary'][:200]}" for i, c in enumerate(cands))
             pick = gemini_json(cfg, (
