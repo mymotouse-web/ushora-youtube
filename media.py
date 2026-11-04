@@ -229,19 +229,47 @@ def make_card(path, W, H, idx, text, accent):
 
 
 def build_segment(visual, kind, dur, W, H, fps, out):
-    fade = f"fade=t=in:st=0:d=0.15,fade=t=out:st={max(dur - 0.15, 0):.3f}:d=0.15"
     enc = ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(fps)]
     if kind == "clip":
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps},"
-              f"eq=brightness=-0.06,{fade},format=yuv420p")
+              "eq=brightness=-0.06,format=yuv420p")
         ffmpeg("-stream_loop", "-1", "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
-    else:  # card image with gentle animated zoom
-        # Tech cards contain circuit artwork; this slow zoom adds visible motion
-        # while keeping the center text readable.
+    else:
         vf = (f"zoompan=z='min(zoom+0.0008,1.08)':"
               f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-              f"d=1:s={W}x{H}:fps={fps},{fade},format=yuv420p")
+              f"d=1:s={W}x{H}:fps={fps},format=yuv420p")
         ffmpeg("-loop", "1", "-framerate", str(fps), "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
+
+
+def join_visuals(work, timeline, count, fps):
+    """Cross-dissolve scene clips while preserving the original total runtime."""
+    if count == 1:
+        ffmpeg("-i", "seg_00.mp4", "-c", "copy", "video_nosub.mp4", cwd=work)
+        return
+    transition = 0.35
+    args = []
+    for i in range(count):
+        args += ["-i", f"seg_{i:02d}.mp4"]
+    graph = []
+    for i in range(count):
+        graph.append(f"[{i}:v]settb=AVTB,format=yuv420p[v{i}]")
+    previous = "v0"
+    elapsed = timeline[0]["total"]
+    for i in range(1, count):
+        current = f"v{i}"
+        if i == count - 1:
+            extra = transition * (count - 1)
+            graph.append(f"[{i}:v]tpad=stop_mode=clone:stop_duration={extra:.3f},settb=AVTB,format=yuv420p[v{i}p]")
+            current = f"v{i}p"
+        offset = max(0.0, elapsed - transition * i)
+        out_label = f"x{i}"
+        graph.append(f"[{previous}][{current}]xfade=transition=fade:duration={transition:.3f}:offset={offset:.3f}[{out_label}]")
+        previous = out_label
+        elapsed += timeline[i]["total"]
+    graph.append(f"[{previous}]fade=t=in:st=0:d=0.12,format=yuv420p[vout]")
+    ffmpeg(*args, "-filter_complex", ";".join(graph), "-map", "[vout]",
+           "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20",
+           "-pix_fmt", "yuv420p", "-r", str(fps), "video_nosub.mp4", cwd=work)
 
 
 # ----------------------------------------------------------------------------
@@ -462,7 +490,7 @@ def build_all(cfg, script, work, out, root, fake_tts=False, use_pexels=True):
             build_segment(str(card), "card", timeline[i]["total"], W, H, fps, seg)
     (work / "segs.txt").write_text("".join(f"file 'seg_{i:02d}.mp4'\n" for i in range(n)))
     (work / "voices.txt").write_text("".join(f"file 'voice_{i:02d}.wav'\n" for i in range(n)))
-    ffmpeg("-f", "concat", "-safe", "0", "-i", "segs.txt", "-c", "copy", "video_nosub.mp4", cwd=work)
+    join_visuals(work, timeline, n, fps)
     ffmpeg("-f", "concat", "-safe", "0", "-i", "voices.txt", "-c", "copy", "voice.wav", cwd=work)
 
     # 3) subtitles
