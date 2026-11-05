@@ -294,11 +294,26 @@ def _rule_based_script(topic, article, cfg):
          "visual_query": "digital technology headlines", "card_text": "SOURCE"},
     ]
     if hindi_sentences:
-        for i, sentence in enumerate(hindi_sentences[:2]):
+        # Use more of the available Hindi source instead of truncating every
+        # no-API news script to only two facts. This can create up to 7 source
+        # scenes while keeping every spoken claim grounded in the article.
+        visual_queries = [
+            "technology data visualization",
+            "computer processor close up",
+            "digital network connections",
+            "smartphone technology interface",
+            "server room lights",
+            "artificial intelligence abstract graphics",
+            "technology research workstation",
+        ]
+        for i, sentence in enumerate(hindi_sentences[:7]):
             voice = ("स्रोत के अनुसार: " if i == 0 else "लेख में आगे बताया गया है: ") + sentence
-            scenes.append({"voice": voice, "caption": voice,
-                           "visual_query": "technology data visualization",
-                           "card_text": f"SOURCE POINT {i + 1}"})
+            scenes.append({
+                "voice": voice,
+                "caption": voice,
+                "visual_query": visual_queries[i % len(visual_queries)],
+                "card_text": f"SOURCE POINT {i + 1}",
+            })
     else:
         # Be transparent rather than reading English text with a Hindi voice or inventing a translation.
         scenes.append({
