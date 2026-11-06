@@ -33,7 +33,7 @@ def sample_script(cfg):
             {"voice": f"आप देख रहे हैं {spoken}, और आज हम इसे बिल्कुल आसान भाषा में समझेंगे।",
              "caption": "आप देख रहे हैं USHORA AI & TECHNOLOGY, और आज हम इसे बिल्कुल आसान भाषा में समझेंगे।",
              "visual_query": "technology futuristic digital", "card_text": "USHORA AI & TECHNOLOGY"},
-            {"voice": "AI इंसानों की तरह किताबें नहीं पढ़ता। वो बहुत सारे उदाहरण, यानी डेटा देखता है।",
+            {"voice": "AI इंसानों की तरह किताबें नहीं पढ़ता। वो बहुत सारे examples और data को analyse करके patterns सीखता है।",
              "caption": "AI इंसानों की तरह किताबें नहीं पढ़ता। वो बहुत सारे उदाहरण, यानी डेटा देखता है।",
              "visual_query": "data center server lights", "card_text": "DATA = EXAMPLES"},
             {"voice": "जैसे आप किसी बच्चे को हज़ार बिल्लियों की फ़ोटो दिखाओ, तो वो धीरे-धीरे बिल्ली पहचानना सीख जाता है।",
@@ -42,10 +42,10 @@ def sample_script(cfg):
             {"voice": "AI भी यही करता है। बस फ़र्क़ ये है कि वो लाखों उदाहरण बहुत तेज़ी से देख लेता है।",
              "caption": "AI भी यही करता है। बस फ़र्क़ ये है कि वो लाखों उदाहरण बहुत तेज़ी से देख लेता है।",
              "visual_query": "computer code screen", "card_text": "LAKHON EXAMPLES"},
-            {"voice": "हर बार गलती करने पर उसके अंदर के नंबर थोड़े बदलते हैं, और अगली बार जवाब बेहतर हो जाता है। इसे ट्रेनिंग कहते हैं।",
+            {"voice": "जब AI गलत prediction करता है, तो training के दौरान उसके parameters update होते हैं। इससे अगली बार उसका result बेहतर हो सकता है।",
              "caption": "हर बार गलती करने पर उसके अंदर के नंबर थोड़े बदलते हैं, और अगली बार जवाब बेहतर हो जाता है। इसे ट्रेनिंग कहते हैं।",
              "visual_query": "abstract technology network", "card_text": "TRAINING"},
-            {"voice": "लेकिन ध्यान रखिए, AI कभी-कभी गलत भी हो सकता है। इसलिए हर जवाब को जाँच कर ही इस्तेमाल करें।",
+            {"voice": "लेकिन एक बात याद रखें—AI का हर answer सही नहीं होता। इसलिए important information को verify करना जरूरी है।",
              "caption": "लेकिन ध्यान रखिए, AI कभी-कभी गलत भी हो सकता है। इसलिए हर जवाब को जाँच कर ही इस्तेमाल करें।",
              "visual_query": "person thinking laptop", "card_text": "JAANCH KARO"},
             {"voice": "अगर ये वीडियो आपको पसंद आया, तो चैनल को सब्सक्राइब करें और कमेंट में बताइए कि अगला टॉपिक क्या होना चाहिए।",
@@ -372,7 +372,7 @@ def make_real_script(cfg, history):
             topic = cands[idx if 0 <= idx < len(cands) else 0]
             article = fetch_article_text(topic["link"], topic["summary"])
             prompt = f"""Write an original, concise Hinglish script for {cfg['channel']['name']}.
-Use ONLY source-supported facts. VOICE: speak naturally in Hindi using Devanagari; English only for common technical terms and product names (AI, software, app, data, smartphone). Never speak full English sentences or read English headlines verbatim. Explain source facts in simple Hindi. CAPTIONS: Devanagari Hindi matching the voice.
+Use ONLY source-supported facts. VOICE: natural professional Indian Hinglish in Devanagari script. Keep sentence structure Hindi, but naturally retain useful English technology words such as AI, update, feature, launch, performance, security, smartphone, app, software, data, processor, model, tool, platform, users, and impact. Do not force translations of common tech vocabulary. Avoid long full-English sentences, awkward literal translations, and romanized Hindi. Speak like a confident technology news presenter: crisp, engaging, clear, conversational, and consistent. CAPTIONS: match the spoken Hinglish exactly, preserving English tech terms in Latin script.
 SOURCE TITLE: {topic['title']}
 SOURCE TEXT: {article}
 Return JSON with title, description, tags, thumbnail_text, source_fact_count and 8-12 scenes. Include 5-7 distinct factual points from the article. Every spoken line and caption must be natural Hindi in Devanagari with common English tech terms allowed. Do not use generic filler, tell viewers merely to read the source, or invent facts. Every factual scene must map to a source-supported point."""
