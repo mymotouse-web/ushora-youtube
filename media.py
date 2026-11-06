@@ -73,7 +73,7 @@ def tts_edge(text, cfg, path):
 
 
 def tts_espeak(text, cfg, path):
-    sh(["espeak-ng", "-v", "hi", "-s", "175", "-w", path, text])
+    sh(["espeak-ng", "-v", "hi", "-s", "190", "-w", path, text])
 
 
 def tts_fake(text, cfg, path):
@@ -165,7 +165,7 @@ def make_card(path, W, H, idx, text, accent):
     hud = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     hd = ImageDraw.Draw(hud)
     accent_rgba = hex_rgb(accent) + (170,)
-    style = random.randrange(6)
+    style = random.randrange(8)
     if style == 0:
         # Processor / circuit-board layout.
         cx, cy = w // 2, int(h * 0.68)
