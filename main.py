@@ -52,7 +52,7 @@ def main():
         print("== REAL MODE: finding a topic and writing the script ==")
         topic, script = content.make_real_script(cfg, load_history())
         print(f"[topic] {topic['title']}")
-    script = content.validate_script(script, cfg)
+    script = content.validate_script(script, cfg, require_source=(args.mode == "real"))
 
     info = media.build_all(cfg, script, work, out, ROOT, fake_tts=args.fake_tts)
 
