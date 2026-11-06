@@ -48,9 +48,8 @@ video:
 voice:
   engines:
     - "edge"
-    - "espeak"
   edge_voice: "hi-IN-MadhurNeural"
-  rate: "+28%"
+  rate: "+8%"
   pitch: "+0Hz"
 
 subtitles:
