@@ -274,56 +274,89 @@ def gemini_json(cfg, prompt, temperature=0.8):
     raise RuntimeError(f"Gemini request failed after retries: {last_error or 'unknown API error'}. "
                        "Check the exact message above for quota, billing, model access, or network issues.")
 
-def _rule_based_script(topic, article, cfg):
-    """Create a Hindi-first source-led brief without an LLM or paid API."""
-    raw = _clean(article or topic.get("summary", ""))
-    sentences = [re.sub(r"\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\s+", raw)]
-    # Never send English source sentences directly to Hindi TTS.
-    hindi_sentences = [
-        x for x in sentences
-        if len(x.split()) >= 7 and len(x) <= 320
-        and len(re.findall(r"[\u0900-\u097f]", x)) >= 12
-    ]
+def _translate_sentence_to_hindi(sentence):
+    """Translate public source text with MyMemory's free endpoint; fail closed."""
+    response = requests.get(
+        "https://api.mymemory.translated.net/get",
+        params={"q": sentence[:450], "langpair": "en|hi"},
+        headers=UA, timeout=20,
+    )
+    response.raise_for_status()
+    data = response.json()
+    translated = _clean(data.get("responseData", {}).get("translatedText", ""))
+    devanagari = len(re.findall(r"[\\u0900-\\u097f]", translated))
+    if len(translated) < 18 or devanagari < 8:
+        raise RuntimeError("Free Hindi translation returned incomplete text.")
+    return translated
 
-    scenes = [
-        {"voice": "नमस्ते! USHORA पर आज की तकनीकी खबर का आसान अपडेट सुनिए।",
-         "caption": "नमस्ते! USHORA पर आज की तकनीकी खबर का आसान अपडेट सुनिए।",
-         "visual_query": "technology news studio", "card_text": "TECH UPDATE"},
-        {"voice": "इस खबर का मूल स्रोत description में दिया गया है।",
-         "caption": "इस खबर का मूल स्रोत description में दिया गया है।",
-         "visual_query": "digital technology headlines", "card_text": "SOURCE"},
+
+def _visual_query_for(text, index):
+    lower = text.lower()
+    topics = [
+        (("chip", "processor", "semiconductor"), "computer processor semiconductor chip macro"),
+        (("phone", "smartphone", "mobile"), "modern smartphone technology closeup"),
+        (("cyber", "security", "hack", "data breach"), "cybersecurity digital network security"),
+        (("robot", "automation"), "robotics automation laboratory"),
+        (("model", "language", "chatbot", "artificial intelligence", " ai "), "artificial intelligence neural network"),
+        (("cloud", "server", "data center"), "cloud computing server racks"),
     ]
-    if hindi_sentences:
-        for i, sentence in enumerate(hindi_sentences[:2]):
-            voice = ("स्रोत के अनुसार: " if i == 0 else "लेख में आगे बताया गया है: ") + sentence
-            scenes.append({"voice": voice, "caption": voice,
-                           "visual_query": "technology data visualization",
-                           "card_text": f"SOURCE POINT {i + 1}"})
-    else:
-        # Be transparent rather than reading English text with a Hindi voice or inventing a translation.
+    for words, query in topics:
+        if any(word in lower for word in words):
+            return query
+    return ("technology research workstation" if index % 2 else "digital data visualization")
+
+
+def _rule_based_script(topic, article, cfg):
+    """Create a Hindi source-led script using a free translation endpoint, never guess."""
+    raw = _clean(article or topic.get("summary", ""))
+    sentences = [re.sub(r"\\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\\s+", raw)]
+    candidates = [
+        x for x in sentences
+        if 45 <= len(x) <= 420 and len(x.split()) >= 8
+        and not x.lower().startswith(("cookie", "subscribe", "sign in", "advertisement"))
+    ][:7]
+    if len(candidates) < 3:
+        raise RuntimeError("Source has fewer than 3 usable factual sentences; refusing a generic news video.")
+
+    translated = []
+    for sentence in candidates:
+        try:
+            hi = _translate_sentence_to_hindi(sentence)
+        except Exception as ex:
+            raise RuntimeError(f"Free Hindi translation unavailable; no video made to avoid inaccurate narration ({type(ex).__name__}).")
+        translated.append(hi)
+
+    scenes = [{
+        "voice": "नमस्ते! USHORA पर आज की टेक खबर को आसान हिंदी में समझते हैं।",
+        "caption": "नमस्ते! USHORA पर आज की टेक खबर को आसान हिंदी में समझते हैं।",
+        "visual_query": "technology news studio digital screens", "card_text": "आज की टेक खबर"
+    }]
+    for i, fact in enumerate(translated):
+        lead = ("पहली अहम बात: " if i == 0 else "एक और जरूरी जानकारी: " if i == 1 else "")
+        voice = lead + fact
         scenes.append({
-            "voice": "इस स्रोत का लेख अंग्रेज़ी में है, इसलिए हम उसकी बातों का गलत अनुवाद नहीं करेंगे।",
-            "caption": "इस स्रोत का लेख अंग्रेज़ी में है, इसलिए हम उसकी बातों का गलत अनुवाद नहीं करेंगे।",
-            "visual_query": "research laptop screen", "card_text": "SOURCE IN ENGLISH"
-        })
-        scenes.append({
-            "voice": "पूरी और सही जानकारी के लिए description में दिया गया original source पढ़ें।",
-            "caption": "पूरी और सही जानकारी के लिए description में दिया गया original source पढ़ें।",
-            "visual_query": "technology research screen", "card_text": "READ THE SOURCE"
+            "voice": voice, "caption": voice,
+            "visual_query": _visual_query_for(candidates[i], i),
+            "card_text": f"खबर का पॉइंट {i + 1}"
         })
     scenes.append({
-        "voice": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
-        "caption": "आपकी राय क्या है? Comment करें और USHORA को subscribe करें।",
-        "visual_query": "creator subscribe animation", "card_text": "YOUR OPINION"
+        "voice": "यह जानकारी दिए गए मूल स्रोत पर आधारित है। लिंक description में है।",
+        "caption": "यह जानकारी दिए गए मूल स्रोत पर आधारित है। लिंक description में है।",
+        "visual_query": "technology article source research laptop", "card_text": "मूल स्रोत description में"
+    })
+    scenes.append({
+        "voice": "आपकी इस खबर पर क्या राय है? Comment में बताइए और USHORA को subscribe कीजिए।",
+        "caption": "आपकी इस खबर पर क्या राय है? Comment में बताइए और USHORA को subscribe कीजिए।",
+        "visual_query": "creator technology studio subscribe", "card_text": "आपकी राय?"
     })
     return {
         "title": topic["title"][:65],
-        "description": f"इस वीडियो में स्रोत के आधार पर तकनीकी अपडेट दिया गया है। Original source: {topic['link']}",
+        "description": f"इस वीडियो में मूल स्रोत के उपलब्ध तथ्यों का हिंदी सार दिया गया है। Original source: {topic['link']}",
         "tags": ["AI", "Technology", "Tech News", "Hindi", "USHORA", "AI Update"],
-        "thumbnail_text": "TECH UPDATE",
+        "thumbnail_text": "आज की टेक खबर",
+        "source_fact_count": len(translated),
         "scenes": scenes,
     }
-
 
 def make_real_script(cfg, history):
     cands = fetch_candidates(cfg, history)
@@ -354,7 +387,7 @@ Return JSON with title, description, tags, thumbnail_text and 8-12 scenes
     return topic, _rule_based_script(topic, article, cfg)
 
 # ----------------------------------------------------------------------------
-def validate_script(script, cfg):
+def validate_script(script, cfg, require_source=False):
     spoken = cfg["channel"]["spoken_name"]
     if not isinstance(script, dict) or not script.get("scenes"):
         raise RuntimeError("Script has no scenes.")
