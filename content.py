@@ -300,10 +300,9 @@ def _visual_query_for(text, index):
         (("model", "language", "chatbot", "artificial intelligence", " ai "), "artificial intelligence neural network"),
         (("cloud", "server", "data center"), "cloud computing server racks"),
     ]
-    for words, query in topics:
-        if any(word in lower for word in words):
-            return query
-    return ("technology research workstation" if index % 2 else "digital data visualization")
+    base = next((query for words, query in topics if any(word in lower for word in words)),
+                "technology research workstation" if index % 2 else "digital data visualization")
+    return f"{base} cinematic shot {index + 1}"
 
 
 def _rule_based_script(topic, article, cfg):
