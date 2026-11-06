@@ -284,7 +284,7 @@ def _translate_sentence_to_hindi(sentence):
     response.raise_for_status()
     data = response.json()
     translated = _clean(data.get("responseData", {}).get("translatedText", ""))
-    devanagari = len(re.findall(r"[\\u0900-\\u097f]", translated))
+    devanagari = len(re.findall(r"[ऀ-ॿ]", translated))
     if len(translated) < 18 or devanagari < 8:
         raise RuntimeError("Free Hindi translation returned incomplete text.")
     return translated
@@ -309,7 +309,7 @@ def _visual_query_for(text, index):
 def _rule_based_script(topic, article, cfg):
     """Create a Hindi source-led script using a free translation endpoint, never guess."""
     raw = _clean(article or topic.get("summary", ""))
-    sentences = [re.sub(r"\\s+", " ", x).strip(" -•") for x in re.split(r"(?<=[.!?।])\\s+", raw)]
+    sentences = [ " ".join(x.split()).strip(" -•") for x in re.split(r"(?<=[.!?।])\s+", raw)]
     candidates = [
         x for x in sentences
         if 45 <= len(x) <= 420 and len(x.split()) >= 8
