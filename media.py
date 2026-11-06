@@ -277,8 +277,12 @@ def make_card(path, W, H, idx, text, accent):
 def build_segment(visual, kind, dur, W, H, fps, out):
     enc = ["-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-r", str(fps)]
     if kind == "clip":
+        # Gentle camera push with cinematic contrast, colour, sharpening and vignette.
         vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={fps},"
-              "eq=brightness=-0.06,format=yuv420p")
+              f"zoompan=z='min(zoom+0.00018,1.035)':x='iw/2-(iw/zoom/2)':"
+              f"y='ih/2-(ih/zoom/2)':d=1:s={W}x{H}:fps={fps},"
+              "eq=brightness=-0.035:contrast=1.08:saturation=1.12,"
+              "unsharp=5:5:0.35:5:5:0.0,vignette=PI/5,format=yuv420p")
         ffmpeg("-stream_loop", "-1", "-i", visual, "-t", f"{dur:.3f}", "-vf", vf, *enc, out)
     else:
         # Vary camera movement per scene so animated cards do not all move alike.
@@ -302,11 +306,12 @@ def build_segment(visual, kind, dur, W, H, fps, out):
 
 
 def join_visuals(work, timeline, count, fps):
-    """Cross-dissolve scene clips while preserving the original total runtime."""
+    """Use varied polished transitions while preserving the original total runtime."""
     if count == 1:
         ffmpeg("-i", "seg_00.mp4", "-c", "copy", "video_nosub.mp4", cwd=work)
         return
-    transition = 0.35
+    transition = 0.42
+    transition_styles = ("fade", "smoothleft", "smoothright", "wipeleft", "wiperight", "circleopen", "pixelize")
     args = []
     for i in range(count):
         args += ["-i", f"seg_{i:02d}.mp4"]
@@ -323,7 +328,8 @@ def join_visuals(work, timeline, count, fps):
             current = f"v{i}p"
         offset = max(0.0, elapsed - transition * i)
         out_label = f"x{i}"
-        graph.append(f"[{previous}][{current}]xfade=transition=fade:duration={transition:.3f}:offset={offset:.3f}[{out_label}]")
+        effect = transition_styles[(i - 1) % len(transition_styles)]
+        graph.append(f"[{previous}][{current}]xfade=transition={effect}:duration={transition:.3f}:offset={offset:.3f}[{out_label}]")
         previous = out_label
         elapsed += timeline[i]["total"]
     graph.append(f"[{previous}]fade=t=in:st=0:d=0.12,format=yuv420p[vout]")
