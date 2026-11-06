@@ -375,8 +375,7 @@ def make_real_script(cfg, history):
 Use ONLY source-supported facts. VOICE: speak naturally in Hindi using Devanagari; English only for common technical terms and product names (AI, software, app, data, smartphone). Never speak full English sentences or read English headlines verbatim. Explain source facts in simple Hindi. CAPTIONS: Devanagari Hindi matching the voice.
 SOURCE TITLE: {topic['title']}
 SOURCE TEXT: {article}
-Return JSON with title, description, tags, thumbnail_text and 8-12 scenes
-(each scene has voice, caption, visual_query, card_text). Do not invent facts."""
+Return JSON with title, description, tags, thumbnail_text, source_fact_count and 8-12 scenes. Include 5-7 distinct factual points from the article. Every spoken line and caption must be natural Hindi in Devanagari with common English tech terms allowed. Do not use generic filler, tell viewers merely to read the source, or invent facts. Every factual scene must map to a source-supported point."""
             return topic, gemini_json(cfg, prompt, temperature=0.7)
         except Exception as ex:
             print(f"[llm] Gemini unavailable; using free source-led fallback ({type(ex).__name__}).")
@@ -404,6 +403,17 @@ def validate_script(script, cfg, require_source=False):
         })
     if len(scenes) < 3:
         raise RuntimeError("Script too short (fewer than 3 usable scenes).")
+    if require_source:
+        fact_count = int(script.get("source_fact_count", 0))
+        if not 3 <= fact_count <= 7:
+            raise RuntimeError("Content QA failed: expected 3-7 translated source facts.")
+        generic = ("पूरी जानकारी के लिए", "read the source", "लेख अंग्रेज़ी में है", "original source पढ़ें")
+        factual = [s for s in scenes if len(s["voice"].split()) >= 8
+                   and not any(g in s["voice"].lower() for g in generic)]
+        if len(factual) < 3:
+            raise RuntimeError("Content QA failed: too few substantive narrated scenes.")
+        if any(len(re.findall(r"[ऀ-ॿ]", s["voice"])) < 8 for s in factual):
+            raise RuntimeError("Content QA failed: factual narration must be Hindi-first.")
     strip_ang = lambda x: re.sub(r"[<>]", "", str(x))
     tags, total = [], 0
     for t in script.get("tags", []):
