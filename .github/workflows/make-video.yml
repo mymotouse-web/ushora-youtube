@@ -21,7 +21,7 @@ on:
       - "media.py"
       - "content.py"
       - "requirements.txt"
-      - ".github/workflows/make-video.yml"
+      - ".github/workflows/make-video.yml"\n      - "tests/**"
 
 permissions:
   contents: read
