@@ -13,8 +13,22 @@ import time
 import requests
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-FONT_DIR = "/usr/share/fonts/truetype/dejavu"
-FONT_BOLD = [f"{FONT_DIR}/DejaVuSans-Bold.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"]
+# Noto Sans Devanagari is required for Hindi. DejaVu Sans lacks these glyphs
+# and silently renders tofu boxes (\u25a1) in Pillow and libass.
+FONT_DIR = "/usr/share/fonts/truetype/noto"
+FONT_NAME = "Noto Sans Devanagari"
+FONT_BOLD = [
+    f"{FONT_DIR}/NotoSansDevanagari-Bold.ttf",
+    f"{FONT_DIR}/NotoSansDevanagariUI-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+]
+
+def _font_path():
+    for candidate in FONT_BOLD:
+        if os.path.exists(candidate):
+            return candidate
+    raise RuntimeError("Hindi font missing. Install the fonts-noto-core system package.")
 
 
 def sh(cmd, cwd=None):
@@ -38,10 +52,11 @@ def dims(cfg):
 
 
 def font(size):
-    for f in FONT_BOLD:
-        if os.path.exists(f):
-            return ImageFont.truetype(f, size)
-    return ImageFont.load_default(size)
+    path = _font_path()
+    # RAQM enables proper shaping of Devanagari conjuncts and vowel marks.
+    engine = getattr(ImageFont, "Layout", None)
+    layout = engine.RAQM if engine and hasattr(engine, "RAQM") else ImageFont.Layout.BASIC
+    return ImageFont.truetype(path, size, layout_engine=layout)
 
 
 def hex_rgb(h):
@@ -349,8 +364,8 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Sub,DejaVu Sans,{fs},&H00FFFFFF,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,4,2,2,60,60,{mv},1
-Style: Mark,DejaVu Sans,{wm},&H99FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,1,0,1,2,0,9,40,40,35,1
+Style: Sub,{FONT_NAME},{fs},&H00FFFFFF,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,4,2,2,60,60,{mv},1
+Style: Mark,{FONT_NAME},{wm},&H99FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,1,0,1,2,0,9,40,40,35,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
