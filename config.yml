@@ -50,7 +50,7 @@ voice:
     - "edge"
     - "espeak"
   edge_voice: "hi-IN-MadhurNeural"
-  rate: "+20%"
+  rate: "+28%"
   pitch: "+0Hz"
 
 subtitles:
