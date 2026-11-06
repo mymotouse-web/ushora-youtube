@@ -98,7 +98,8 @@ def tts_fake(text, cfg, path):
 
 def synth_voice(text, cfg, base, fake):
     """Returns (path, engine). Tries engines in order from config."""
-    engines = ["fake"] if fake else cfg["voice"].get("engines", ["edge", "espeak"])
+    # Use one neural engine throughout a video; switching to eSpeak mid-video changes cadence and timbre.
+    engines = ["fake"] if fake else cfg["voice"].get("engines", ["edge"])
     errors = []
     for eng in engines:
         ext = {"edge": ".mp3", "espeak": ".wav", "fake": ".wav"}[eng]
